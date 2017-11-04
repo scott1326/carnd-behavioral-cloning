@@ -44,8 +44,32 @@ class SimplePIController:
 
 
 controller = SimplePIController(0.1, 0.002)
-set_speed = 9
+set_speed = 10
 controller.set_desired(set_speed)
+
+
+###
+#     preprocess_image from model.ipynb
+###
+import cv2
+
+def preprocess_image(image) :
+    # need to crop, normalize, rescale here (grayscale?)
+
+    
+    # crop top 65 and bottom 25 rows of image for sky and hood
+    image = image[65:135, :, :]
+    #grayscale here
+    #image = np.dot(image[...,:3], [[0.299],[0.587],[0.114]])
+    #image_gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    #plt.imshow(image_gray, cmap='gray')
+    #resize to 64x64
+    image = cv2.resize(image, (64, 64), interpolation=cv2.INTER_AREA)
+    #normalize
+    image = image / 255.0 - 0.5
+    
+    return image
+###
 
 
 @sio.on('telemetry')
@@ -61,6 +85,8 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
+        # added image preprocessing here to duplicate training
+        image_array = preprocess_image(image_array)
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
         throttle = controller.update(float(speed))
